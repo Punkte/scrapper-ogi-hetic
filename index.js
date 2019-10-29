@@ -29,13 +29,17 @@ const main = async () => {
       [...document.querySelectorAll('body > section.ogi > div.bloc_all > table:nth-child(3) > tbody > tr')]
         .map(tr => {
           const name = tr.querySelector('td a').innerHTML
+          const username = (tr.querySelector('td a').href).split('/').slice(-1)[0]
           const company = (tr.querySelector('td:nth-child(2) a').innerHTML).trim()
           const field = tr.querySelector('td:nth-child(3)').innerHTML
+          const img = `https://outils.hetic.net/external/picture/${username}`
 
           return {
+            username,
             name,
             company,
-            field
+            field,
+            img
           }
         })
       ,
