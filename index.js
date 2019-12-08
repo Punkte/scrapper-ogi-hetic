@@ -2,8 +2,14 @@ require('dotenv').config()
 const puppeteer = require('puppeteer')
 const fs = require('fs')
 
-const main = async () => {
-  const browser = await puppeteer.launch();
+const years = [2016, 2017, 2018, 2019, 2020, 2021]
+
+const main = async (year) => {
+  const browser = await puppeteer.launch({
+    headless: false,
+    ignoreHTTPSErrors: true,
+    args: [`--window-size=1280,720`]
+  });
   const page = await browser.newPage();
   await page.goto('https://outils.hetic.net/auth/login/');
 
@@ -14,31 +20,32 @@ const main = async () => {
   }, { username: process.env.HETIC_USERNAME, password: process.env.HETIC_PWD })
 
   await page.waitForNavigation()
+  
+  // Selection de l'onglet ogi
   await page.click('nav ul li:last-child a')
   
-  
-  await page.evaluate(() => {
-    const selectPromo = document.querySelector('[action="/ogi/search"]:last-child')
-    selectPromo.querySelector('select').value = '2020'
-    selectPromo.submit()
-  })
-  await page.waitForNavigation()
+  // Selection de l'onglet étudiant
+  await page.click('body > section.ogi.home_user > div.breadcrumb > div > a:nth-child(6)')
 
+  await page.select('#select_list_promo_students', year.toString())
+  
+
+  await page.screenshot({path: 'buddy-screenshot.png'});
   const lines = await page.evaluate(() => {
     return JSON.stringify(
-      [...document.querySelectorAll('body > section.ogi > div.bloc_all > table:nth-child(3) > tbody > tr')]
+      [...document.querySelectorAll('body > section.ogi > div.bloc_all > .liste_insertions > tbody > tr')]
         .map(tr => {
           const name = tr.querySelector('td a').innerHTML
           const username = (tr.querySelector('td a').href).split('/').slice(-1)[0]
-          const company = (tr.querySelector('td:nth-child(2) a').innerHTML).trim()
-          const field = tr.querySelector('td:nth-child(3)').innerHTML
+          const first_name = (tr.querySelector('td:nth-child(2) a').innerHTML).trim()
+          const company = tr.querySelector('td:nth-child(3) a').innerText
           const img = `https://outils.hetic.net/external/picture/${username}`
 
           return {
             username,
             name,
+            first_name,
             company,
-            field,
             img
           }
         })
@@ -48,13 +55,19 @@ const main = async () => {
     )
   })
 
-  fs.writeFile('./data.json', lines, (err, res) => {
+  fs.writeFile(`./data/webp_${year}.json`, lines, (err, res) => {
     if(err) throw new Error(err)
     console.log(res)
   })
-  await page.screenshot({path: 'buddy-screenshot.png'});
+  // await page.screenshot({path: 'buddy-screenshot.png'});
   console.log('New Page URL:', page.url())
   await browser.close();
 } 
+const run = async () => {
+  for(let i = 0; i < years.length; i++) {
+    const year = years[i]
+    await main(year)
+  }
+}
 
-main()
+run()
