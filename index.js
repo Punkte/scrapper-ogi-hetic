@@ -2,6 +2,8 @@ require('dotenv').config()
 const puppeteer = require('puppeteer')
 const fs = require('fs')
 
+const { kebabCase }  = require('lodash')
+
 const years = [2016, 2017, 2018, 2019, 2020, 2021]
 
 const main = async (year) => {
@@ -28,6 +30,7 @@ const main = async (year) => {
   await page.click('body > section.ogi.home_user > div.breadcrumb > div > a:nth-child(6)')
 
   await page.select('#select_list_promo_students', year.toString())
+  const toKebab = string => kebabCase(string)
   
 
   await page.screenshot({path: 'buddy-screenshot.png'});
@@ -46,16 +49,20 @@ const main = async (year) => {
             name,
             first_name,
             company,
-            img
+            img,
           }
-        })
-      ,
-      null,
-      2
-    )
+        }))
   })
 
-  fs.writeFile(`./data/webp_${year}.json`, lines, (err, res) => {
+  const linesWithMail = JSON.stringify(JSON.parse(lines).map(el => {
+    const { name, first_name } = el
+    return {
+      ...el,
+      mail: `${kebabCase(first_name)}.${kebabCase(name)}@hetic.net`
+    }
+  }), null,2)
+
+  fs.writeFile(`./data/webp_${year}.json`, linesWithMail, (err, res) => {
     if(err) throw new Error(err)
     console.log(res)
   })
